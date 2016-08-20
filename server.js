@@ -15,7 +15,7 @@ var app = express();
 * Server configuration *
 ***********************/
 var api_key = '';
-var port = 3000;
+var port = 9000;
 app.use(morgan('dev'));
 //app.use(bodyParser.urlencoded({ extended : false}));
 //app.use(bodyParser.json());
