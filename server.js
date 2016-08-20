@@ -14,11 +14,9 @@ var app = express();
 /***********************
 * Server configuration *
 ***********************/
-var api_key = '';
+var api_key = 'AIzaSyCR0Im17axVc4hgO-T4pr3lgM1vHeGcNxw';
 var port = 9000;
 app.use(morgan('dev'));
-//app.use(bodyParser.urlencoded({ extended : false}));
-//app.use(bodyParser.json());
 
 /**********************
 * Reference Variables *
@@ -86,13 +84,29 @@ function getDisplayString(start,end,callback) {
 }
 
 app.get('/', function(req,res) {
-  res.send('Hello World!');
+  res.send({
+    'Name' : 'Elth.care sample server',
+    'Author' : 'Arjhun Srinivas',
+    'Version' : '1.0.0'
+  });
 });
 
 app.get('/getSlots', function(req,res) {
-  var url = 'https://maps.googleapis.com/maps/api/place/details/json?placeid=' + req.query.id + '&key=AIzaSyCR0Im17axVc4hgO-T4pr3lgM1vHeGcNxw';
+  if(typeof req.query.id === 'undefined' || typeof req.query.id === null || req.query.id == '') {
+    res.send({
+      'Error' : 'Undefined ID'
+    });
+    return;
+  }
+  var url = 'https://maps.googleapis.com/maps/api/place/details/json?placeid=' + req.query.id + '&key=' + api_key;
   request(url, function(error, response, body) {
     var data = JSON.parse(body);
+    if(data.status == "INVALID_REQUEST") {
+      res.send({
+        'status' : data.status
+      });
+      return;
+    }
     async.map(data.result.opening_hours.periods, makeSlots, function(err, results) {
       if(err) {
         console.log(err);
