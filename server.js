@@ -143,7 +143,13 @@ app.get('/getSlots', function(req,res) {
       });
       q.drain = function() {
         // All tasks completed
-        res.send(result);
+        var finalResult = new Array();
+        for(i = 0; i < result.length; i++) {
+          if(typeof result[i] !== 'undefined' && typeof result[i] !== null) {
+            finalResult.push(result[i]);
+          }
+        }
+        res.send(finalResult);
       };
     });
   })
