@@ -123,14 +123,9 @@ app.get('/getSlots', function(req,res) {
       var q = async.queue(function(item, callback) {
         index = days.indexOf(item.Day);
         if(result[index] != null) {
-          //console.log(item.Day, 'Not Empty');
           result[index].Slots = result[index].Slots.concat(item.Slots);
-          //console.log(result[index].Slots);
-          //console.log(item.Slots);
         } else {
-          //console.log(item.Day, 'Empty');
           result[index] = item;
-          //console.log(result[index].Slots);
         }
         callback();
       });
