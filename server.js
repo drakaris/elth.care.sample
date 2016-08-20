@@ -21,7 +21,7 @@ app.use(morgan('dev'));
 /**********************
 * Reference Variables *
 **********************/
-var days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+var days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
 /***********************
 * Supporting Functions *
@@ -31,18 +31,24 @@ var makeSlots = function (obj, callback) {
   var day = obj.close.day == obj.open.day ? obj.close.day : callback('Unchecked duration');
   var slots = [];
   // Start spliting duration with time slice and append to slots.
-  var timeMarker = Number(obj.open.time);
-  async.whilst(function() { return timeMarker < Number(obj.close.time); }, function(callback) {
+  var startTime = Number(obj.open.time);
+  var endTime = Number(obj.close.time);
+  var timeMarker = startTime;
+  // Initial tick calculation
+  var nextTick = startTime % timeSlice == 0 ? startTime + timeSlice : startTime + timeSlice - startTime % timeSlice;
+  async.whilst(function() { return timeMarker < endTime; }, function(callback) {
     var tmp = {};
     // Add zero padding if needed
     tmp['Start Time'] = timeMarker.toString().length < 4 ? "0" + timeMarker.toString() : timeMarker.toString();
-    timeMarker += timeSlice;
-    if(timeMarker <= Number(obj.close.time)) {
-      // Add zero padding if needed
-      tmp['End Time'] = timeMarker.toString().length < 4 ? "0" + timeMarker.toString() : timeMarker.toString();
+    if(nextTick <= Number(obj.close.time)) {
+      // End current slot
+      tmp['End Time'] = nextTick.toString().length < 4 ? "0" + nextTick.toString() : nextTick.toString();
+      timeMarker += nextTick;
     } else {
       tmp['End Time'] = obj.close.time;
     }
+    nextTick += timeSlice;
+    timeMarker = tmp['End Time'];
     getDisplayString(tmp['Start Time'],tmp['End Time'], function(displayString) {
       tmp['Display String'] = displayString;
       slots.push(tmp);
@@ -54,7 +60,7 @@ var makeSlots = function (obj, callback) {
       console.log(err);
     } else {
       result = {
-        'Day' : days[day - 1],
+        'Day' : days[day],
         'Slots' : slots
       };
       callback(null, result);
@@ -112,7 +118,33 @@ app.get('/getSlots', function(req,res) {
         console.log(err);
         res.send(err);
       }
-      res.send(results);
+      var result = [];
+      // Create queue and worker with concurrency 1
+      var q = async.queue(function(item, callback) {
+        index = days.indexOf(item.Day);
+        if(result[index] != null) {
+          //console.log(item.Day, 'Not Empty');
+          result[index].Slots = result[index].Slots.concat(item.Slots);
+          //console.log(result[index].Slots);
+          //console.log(item.Slots);
+        } else {
+          //console.log(item.Day, 'Empty');
+          result[index] = item;
+          //console.log(result[index].Slots);
+        }
+        callback();
+      });
+      // Push results into queue
+      q.push(results, function(err) {
+        if(err) {
+          console.log(err)
+          res.send(err);
+        }
+      });
+      q.drain = function() {
+        // All tasks completed
+        res.send(result);
+      };
     });
   })
 });
